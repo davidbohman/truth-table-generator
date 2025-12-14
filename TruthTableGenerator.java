@@ -1,12 +1,8 @@
 
-class BooleanCalculator{
+
+class TruthTableGenerator{
     public static void main(String[]args){
-
-        // XOR = ⊕
-        TruthTable table = new TruthTable("!a ⊕ b + a*b");
-        table.printTable();
-
-
+        new UI(500, 500);
     }
 }
 

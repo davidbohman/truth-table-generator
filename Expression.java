@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 
 
 
@@ -11,6 +12,7 @@ public class Expression {
     private final static int EXTRA_PRECEDENCE = 5;
     private final static int HIGHEST_PRECEDENCE = 4;
     public final static String XOR = "⊕" ;
+    public final static String BINARY_OPERATORS = "+*⊕";
 
     Variable var;
     NotOp nTerm;
@@ -211,10 +213,6 @@ public class Expression {
             }
         }
 
-        
-        System.out.println(tokens);
-        System.out.println(finalExpression);
-
         //Loop that connects expressions in correct order based on precedence
         while(finalExpression.size() > 1){
 
@@ -269,24 +267,116 @@ public class Expression {
             || this.oTerm != null && (this.oTerm.lTerm == null && this.oTerm.rTerm == null);   
     }
 
+    /**
+     * Used for controlling that the input is valid
+     *@throws IllegalargumentException 
+     if two binary operators follow each other, 
+     if '!' operator is misplaced, 
+     if uneven amount of parenthesis, 
+     if binary operator isn't given two arguments
+     *
+    */
+    private static void validInput(char[] inputArr){
+
+       
+        if(inputArr.length == 0) throw new IllegalArgumentException("Empty input, enter expression");
+
+        //If input the input starts or ends with a binary operator it's invalid
+        if(BINARY_OPERATORS.contains(inputArr[0]+"") || BINARY_OPERATORS.contains(inputArr[inputArr.length-1]+""))
+            throw new IllegalArgumentException("Expression can't begin/end with binary operator");
+
+        Stack<Character> parenthesisStack = new Stack<>();
+        Stack<Character> doubleOperatorStack = new Stack<>();
+        Stack<Character> notOperatorCheck = new Stack<>();
+        
+        for(char c : inputArr){
+            switch (c) {
+                case '(':
+                    parenthesisStack.push(c);
+                    break;
+                case ')':
+                    if(parenthesisStack.isEmpty()) throw new IllegalArgumentException("Uneven parenthesis");
+                    parenthesisStack.pop();
+                    break;
+                case '!':
+                    //LÄGG TILL
+                    notOperatorCheck.push(c);
+                    break;
+                default:
+                    if(BINARY_OPERATORS.contains("" + c))
+                        if(doubleOperatorStack.isEmpty()) doubleOperatorStack.push(c);
+                        else throw new IllegalArgumentException("Double binary operator error"); 
+                    else{
+                        if(!doubleOperatorStack.isEmpty()) doubleOperatorStack.pop();
+                    }
+                    notOperatorCheck.push(c);
+                    break;
+            }
+        }
+
+            if(!parenthesisStack.isEmpty()) throw new IllegalArgumentException("Uneven parenthesis");
+            
+            if(!notOperatorCheck.isEmpty() && notOperatorCheck.pop() == '!')
+                throw new IllegalArgumentException(" '!' operator error");
+
+            //Checking if not operator has correct placement
+            char last = 'a';
+            while(!notOperatorCheck.isEmpty()){
+                char current = notOperatorCheck.pop();
+                if(current == '!' && BINARY_OPERATORS.contains(last + ""))
+                    throw new IllegalArgumentException(" '!' operator can't be infront of binary operator");
+                
+                last = current;
+            }
+        
+        
+        
+    }
+
+
     //Tokanzies an input string into variables and operators
     public static List<String> tokanize (String input){
+
+        char[]inputArr = input.trim().replaceAll(" ", "").toCharArray();
+
+        //Error checking, throws exception if input is invalid
+        validInput(inputArr);
+
         List <String> tokens = new ArrayList<>();
         
-        char[]inputArr = input.trim().replaceAll(" ", "").toCharArray();
-        
         String varBuilder = "";
-
+        //Used for simplifying double !! operators
+        char lastCharacter = '0';
         for(char c : inputArr){
-            if(c == '*' || c == XOR.charAt(0) ||c == '+' || c == '!' || c == '('|| c == ')'){
+            if((BINARY_OPERATORS).contains(""+c) || c == '('|| c == ')')
+            {   
                 if(!varBuilder.isBlank())tokens.add(varBuilder);
                 tokens.add("" + c);
                 varBuilder = ""; //Reset var builder
+                lastCharacter = c;
             }
-            else{
+            else if(c == '!')
+            {
+                if(!varBuilder.isBlank())tokens.add(varBuilder);
+                varBuilder = ""; //Reset var builder
+
+                //If there is a !! in the input then remove them both becuase they cancel out
+                if(lastCharacter == c){
+                    tokens.removeLast();
+                    lastCharacter = '0';
+                }
+                else{ 
+                    tokens.add("" + c);
+                    lastCharacter = c;
+                }
+            }
+            else
+            {
                 varBuilder += c; //Add char to variable name
+                lastCharacter = c;
             }
 
+            
         }
         //Add the last variable
         if(!varBuilder.isBlank())tokens.add(varBuilder);
@@ -347,7 +437,7 @@ public class Expression {
             result = exprToString(expr.oTerm.rTerm, precedenceCheck) + " + " + exprToString(expr.oTerm.lTerm, precedenceCheck);
         }
         else if(expr.xorTerm != null){
-            result = exprToString(expr.xorTerm.rTerm, precedenceCheck) + " "+ XOR + " " + exprToString(expr.xorTerm.lTerm, precedenceCheck);
+            result = exprToString(expr.xorTerm.rTerm, precedenceCheck) + " " + XOR + " " + exprToString(expr.xorTerm.lTerm, precedenceCheck);
         }
         else if(expr.nTerm != null){
             result = "!" + exprToString(expr.nTerm.expr, precedenceCheck);

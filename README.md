@@ -3,4 +3,14 @@ A java project where the goal is to generate a correctly evaluated truth table b
 
 I think almost every computer engineer is tired of writing out truth tables to be able to evaluate a boolean expression, but this generator solves this for you!
 
-At the moment the generator only works by the user entering a string into the "TruthTable" constructor in the main method in the TruthTableGenerator source file and then by running the program, where the string is the expression to be evaluated. I'm going to add a simple UI using swing and also plan to add Karnaugh diagrams and expression simplification to help with that tedious task as well.
+* Download/clone the repository and run the TruthTableGenerator.java file.
+You should see a simple Java Swing window pop up where you can enter your expression. 
+I use JDK-21 but I believe that any version after JDK-11 should work!
+
+* Variable names can be as long as you please
+* The "!" operator needs to come before an expression or variable
+* The generator will simplify expressions containing "!!" because they cancel out.
+* You can use parenthesis to emphasise precedence
+* It should give you an error message if you give it an invalid input
+
+
