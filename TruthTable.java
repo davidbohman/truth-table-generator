@@ -1,30 +1,63 @@
 import java.util.ArrayList;
 import java.util.List;
 
+
+/**
+ * Represents a truth table for a given boolean expression.
+ * 
+ * <p>This class takes a boolean expression as in String format as input, parses it into an abstract syntax tree (AST)
+ * using {@link Expression}, identifies all variables, and constructs a complete truth table.
+ * The table includes the values of all sub-expressions, as well as the main expression.</p>
+ * 
+ * <p>It supports printing the table in a nicely formatted manner.</p>
+ */
 public class TruthTable {
 
-    //List of all variables, sub expressions and final expression
-    List<Expression> expressionBreakdown;
-
     //Main expression
-    Expression expr;
+    private Expression expr;
+
+    //List of all sub expressions and final expression (including variables)
+    private List<Expression> expressionBreakdown;
+
+    //List of only variables
+    private List<Expression.Variable> variables;
 
     //Amount of variables
-    int numberOfVariables;
+    private int numberOfVariables;
 
     //Table dimensions
-    int rows;
-    int columns;
-    String[][] table;
+    private int rows;
+    private int columns;
 
+    //Actual table containing values
+    private String[][] table;
+
+
+    /**
+     * Constructs a {@code TruthTable} for the given boolean expression.
+     *
+     * @param input the boolean expression as a string, e.g. "A * (!B + C)"
+     * @throws IllegalArgumentException if the input expression is invalid
+     */
     TruthTable(String input){
-        this.expressionBreakdown = Expression.parseToExpr(input);
-        this.expr = expressionBreakdown.getLast();
-        this.numberOfVariables = Expression.numOfVariables(expressionBreakdown);
+        this.expr = Expression.parseToExpression(input);
+        this.expressionBreakdown = expr.getSubExpressions();
+        this.variables = expr.getVariables();
+        this.numberOfVariables = variables.size();
         this.columns = expressionBreakdown.size();
         this.rows = ((int) Math.pow(2, numberOfVariables)) + 1;
         this.table = new String[this.rows][this.columns];
         buildTable();
+    }
+
+    /**
+     * Returns the truth table as a 2D array of strings.
+     * Each row represents a combination of variable values and evaluated expressions.
+     *
+     * @return the truth table
+     */
+    public String[][] getTable() {
+        return this.table;
     }
 
     //Builds the whole table by assigning and evaluating values at all indexes
@@ -58,25 +91,24 @@ public class TruthTable {
 
             //Assign current rows variale values
             for(int j = 0; j < this.numberOfVariables; j++){
-                expressionBreakdown.get(j).currentValue = Integer.parseInt(this.table[i][j]);
+                variables.get(j).setCurrentValue(Integer.parseInt(this.table[i][j]));
             }
+
             //Evaluate expressions with current row values
             for(int j = this.numberOfVariables; j < this.columns; j++){
-                int result = Expression.evalExpr(this.expressionBreakdown.get(j));
+                int result = this.expressionBreakdown.get(j).evaluateExpression();
                 this.table[i][j] = "" + result;
             }
         }
     }
 
-    //Prints table along with some information
+    /**
+     * Prints the truth table in a nicely formatted manner, including sub-expression headers and
+     * aligned columns.
+     */
     public void printTable(){
         
-        System.out.println("\nExpression: " + this.expr);
-        System.out.println("Number of variables: " + this.numberOfVariables);
-        System.out.println("Rows: " + this.rows + " and Cols: " + this.columns + "\n\n");
-
         List<Integer> cellWidth = new ArrayList<>();
-        
         
         for(Expression expr : this.expressionBreakdown){
             int length = expr.toString().length();

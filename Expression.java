@@ -1,460 +1,334 @@
-
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 
 
 
-public class Expression {
-
-    private final static int EXTRA_PRECEDENCE = 5;
-    private final static int HIGHEST_PRECEDENCE = 4;
-    public final static String XOR = "⊕" ;
-    public final static String BINARY_OPERATORS = "+*⊕";
-
-    Variable var;
-    NotOp nTerm;
-    AndOp aTerm;
-    XorOp xorTerm;
-    OrOp oTerm;
-    int precedence;
-    int currentValue;
-
-    Expression(String var){
-        this.var = new Variable(var);
-        this.aTerm = null;
-        this.oTerm = null;
-        this.nTerm = null;
-        this.xorTerm = null;
-        this.precedence = 0;
-        this.currentValue = 0;
-    }
-
-    Expression(AndOp aTerm){
-        this.aTerm = aTerm;
-        this.var = null;
-        this.oTerm = null;
-        this.nTerm = null;
-        this.xorTerm = null;
-        this.precedence = HIGHEST_PRECEDENCE-1;
-        this.currentValue = 0;
-    }
-
-
-    Expression(OrOp oTerm){
-        this.oTerm = oTerm;
-        this.aTerm = null;
-        this.var = null;
-        this.nTerm = null;
-        this.xorTerm = null;
-        this.precedence = HIGHEST_PRECEDENCE-3;
-        this.currentValue = 0;
-    }
-
-    Expression(NotOp nTerm){
-        this.nTerm = nTerm;
-        this.aTerm = null;
-        this.oTerm = null;
-        this.var = null;
-        this.xorTerm = null;
-        this.precedence = HIGHEST_PRECEDENCE;
-        this.currentValue = 0;
-    }
-
-    Expression(XorOp xorTerm){
-        this.nTerm = null;
-        this.aTerm = null;
-        this.oTerm = null;
-        this.var = null;
-        this.xorTerm = xorTerm;
-        this.precedence = HIGHEST_PRECEDENCE-2;
-        this.currentValue = 0;
-    }
-
-    static class Variable{
-        String varName;
-        Variable(String name){
-            this.varName = name;
-        }
-    }
-
-    static class NotOp{
-        Expression expr;
-
-        NotOp(Expression expr){
-            this.expr = expr;
-        }
-    }
-
-    static class AndOp{
-        Expression lTerm;
-        Expression rTerm;
-        AndOp(Expression lTerm, Expression rTerm){
-            this.lTerm = lTerm;
-            this.rTerm = rTerm;
-        }
-    }
-
-    static class XorOp{
-        Expression lTerm;
-        Expression rTerm;
-        XorOp(Expression lTerm, Expression rTerm){
-            this.lTerm = lTerm;
-            this.rTerm = rTerm;
-        }
-
-    }
-
-    static class OrOp{
-        Expression lTerm;
-        Expression rTerm;
-        OrOp(Expression lTerm, Expression rTerm){
-            this.lTerm = lTerm;
-            this.rTerm = rTerm;
-        }
-    }
-
-
-
-
+/**
+ * Abstract base class representing a boolean expression.
+ * Supports binary operations (AND, OR, XOR) and unary operation (NOT),
+ * as well as variables.
+ *
+ * Subclasses must implement:
+ * - {@link #evaluateExpression()} for computing the expression value.
+ * - {@link #subExprToString(Operator)} for converting to a string with correct precedence.
+ * - {@link #retriveSubExpression(List)} for retrieving subexpressions in the AST.
+ */
+public abstract class Expression {
     
-    //Evaluates expression based on currently assigned values
-    public static int evalExpr(Expression expr){
+    // ----- ABSTRACT METHODS ----------
 
-        // if expression is a variable 
-        if(expr.var != null) return expr.currentValue;
-        
-        int result = -1; //If minus one returns then something is wrong
+    //Helper to toString method
+    protected abstract String subExprToString(Operator previousOp);
 
-        if(expr.aTerm != null){
-            result = evalExpr(expr.aTerm.lTerm) == 1 && evalExpr(expr.aTerm.rTerm) == 1 ? 1 : 0;  
-        }
-        if(expr.oTerm != null){
-            result = evalExpr(expr.oTerm.lTerm) == 1 || evalExpr(expr.oTerm.rTerm) == 1 ? 1 : 0;
-        }
-        if(expr.xorTerm != null){
-            result = evalExpr(expr.xorTerm.lTerm) + evalExpr(expr.xorTerm.rTerm) == 1 ? 1 : 0;
-        }
-        if(expr.nTerm != null){
-            result = evalExpr(expr.nTerm.expr) == 1 ? 0 : 1;
-        }
-        return result;
-    }
+    //Helper to getSubExpressions()
+    protected abstract void retriveSubExpression(List<Expression> breakdown);
 
-    //Checks if a sub expression contains a certain variable
-    public static boolean containsVariable(String varName, Expression expr){
+    /**
+     * @return The size of expression, how many layers it has
+     */
+    public abstract int expressionSize();
+    
+    /**
+     * Evaluates expression based on the variables current value
+     * @return 1 or 0
+     */
+    public abstract int evaluateExpression();
 
-        if(expr.var != null && expr.var.varName.equals(varName)) return true;
-        else if(expr.aTerm != null){
-            return containsVariable(varName, expr.aTerm.lTerm) || containsVariable(varName, expr.aTerm.rTerm);
-        }
-        else if(expr.oTerm != null){
-            return containsVariable(varName, expr.oTerm.lTerm) || containsVariable(varName, expr.oTerm.rTerm);
-        }
-        else if(expr.xorTerm != null){
-            return containsVariable(varName, expr.xorTerm.lTerm) || containsVariable(varName, expr.xorTerm.rTerm);
-        }
-        else if(expr.nTerm != null){
-            return containsVariable(varName, expr.nTerm.expr);
-        }
-        else return false;
-    }
 
-    //takes a string as input and assembles the expression
-    public static List<Expression> parseToExpr(String input){
-        List<String> tokens = tokanize(input);
-        List<Expression> finalExpression = new ArrayList<>();
-        List<Expression> expressionBreakdown = new LinkedList<>();
-
-        //HasMap for making sure that reoccuring variables don't get multiple instances
-        HashMap <String, Expression> variables = new HashMap<>();
-
-        int additionalPrecedence = 0;
-        for(String token : tokens){
-            if(token.contains("(")){
-                additionalPrecedence += EXTRA_PRECEDENCE;
-            }
-            else if(token.contains(")")){
-                additionalPrecedence -= EXTRA_PRECEDENCE;
-            }
-            else if(token.contains("!")){
-                Expression expr = new Expression(new NotOp(null));
-                expr.precedence += additionalPrecedence;
-                finalExpression.add(expr);
-            }
-            else if(token.contains("*")){
-                Expression expr = new Expression(new AndOp(null, null));
-                expr.precedence += additionalPrecedence;
-                finalExpression.add(expr);
-            }
-            else if(token.contains(XOR)){
-                Expression expr = new Expression(new XorOp(null, null));
-                expr.precedence += additionalPrecedence;
-                finalExpression.add(expr);
-            }
-            else if(token.contains("+")){
-                Expression expr = new Expression(new OrOp(null, null));
-                expr.precedence += additionalPrecedence;
-                finalExpression.add(expr);
-            }
-            else{
-                if(variables.containsKey(token)){
-                    Expression variable = variables.get(token);
-                    finalExpression.add(variable);
-                }
-                else{
-                    Expression variable = new Expression(token);
-                    variables.put(token, variable);
-                    finalExpression.add(variable);
-                    expressionBreakdown.add(variable);
-                }
-            }
-        }
-
-        //Loop that connects expressions in correct order based on precedence
-        while(finalExpression.size() > 1){
-
-            Expression currentOp = null;
-            int opIndex = -1;
-            int highestPrecedence = 0;
-
-            //Finding subexpression with highest precedence 
-            for(int i = 0; i < finalExpression.size(); i++){
-
-                Expression currentExpr = finalExpression.get(i);
-                int currPrec = currentExpr.precedence;
-
-                //Finding empty operator expression with highest precedence
-                if(currPrec > highestPrecedence && currentExpr.emptyOperator()){
-                    highestPrecedence = currPrec;
-                    opIndex = i;
-                    currentOp = finalExpression.get(i);
-                }
-            }
-
-            //Combining an operator with an expression reducing the total size of the final expression list
-            if(currentOp.nTerm != null){
-                currentOp.nTerm.expr = finalExpression.remove(opIndex + 1);
-            }
-            if(currentOp.aTerm != null){
-                currentOp.aTerm.lTerm = finalExpression.remove(opIndex + 1);
-                currentOp.aTerm.rTerm = finalExpression.remove(opIndex - 1);
-            }
-            if(currentOp.xorTerm != null){
-                currentOp.xorTerm.lTerm = finalExpression.remove(opIndex + 1);
-                currentOp.xorTerm.rTerm = finalExpression.remove(opIndex - 1);
-            }
-            if(currentOp.oTerm != null){
-                currentOp.oTerm.lTerm = finalExpression.remove(opIndex + 1);
-                currentOp.oTerm.rTerm = finalExpression.remove(opIndex - 1);
-            }
-
-            //Adds subexpression to the expression breakdown list
-            expressionBreakdown.add(currentOp);
-        }
-        
-        return expressionBreakdown;
-    }
-
-    //Checks if expression has empty arguments (Only returns true for operator expressions)
-    private boolean emptyOperator()
-    {   
-        return this.nTerm != null && this.nTerm.expr == null
-            || this.aTerm != null && (this.aTerm.lTerm == null && this.aTerm.rTerm == null)
-            || this.xorTerm != null && (this.xorTerm.lTerm == null && this.xorTerm.rTerm == null)
-            || this.oTerm != null && (this.oTerm.lTerm == null && this.oTerm.rTerm == null);   
+    // --------- UTILITY ----------------
+    
+    @Override
+    public String toString(){
+        return this.subExprToString(Operator.OR); //Starts with 'OR' becuase it got the lowest precedence
     }
 
     /**
-     * Used for controlling that the input is valid
-     *@throws IllegalargumentException 
-     if two binary operators follow each other, 
-     if '!' operator is misplaced, 
-     if uneven amount of parenthesis, 
-     if binary operator isn't given two arguments
-     *
+     * Creates a list of subExpressions from caller expression, the list will be sorted by variables coming first
+     * in lexographical order and then subexpression based on expression size
+     * @return List of sub expressions
+     */
+    public List<Expression> getSubExpressions(){
+        List<Expression> breakdown = new ArrayList<>();
+        this.retriveSubExpression(breakdown);
+
+        //Sorts the list of subexpressions for a nicer presentation, variables should always come first
+        breakdown.sort(new Comparator<Expression>() {
+            @Override
+            public int compare(Expression expr1, Expression expr2){
+                if((expr1 instanceof Variable) && (expr2 instanceof Variable)){
+                    return ((Variable) expr1).name.compareTo(((Variable) expr2).name);
+                }
+                return Integer.compare(expr1.expressionSize(), expr2.expressionSize());   
+            }
+        });
+
+        return breakdown;
+    }
+
+    /**
+     * Returns a list containing all the variables in caller expression
+     * @return List of variables 
+     */
+    public List<Variable> getVariables(){
+        List<Variable> variables = new ArrayList<>();
+        List<Expression> subExpressions = this.getSubExpressions();
+
+        for(Expression expr : subExpressions){
+            if(expr instanceof Variable) variables.add((Variable) expr);
+            //Could add a break here bacues it's always sorted
+        }
+        return variables;
+    }
+
+    
+    
+    // ----- SUB CLASSES ---------------
+
+    /**
+    * Represents a binary operation between two expressions.
     */
-    private static void validInput(char[] inputArr){
+    static class BinaryOp extends Expression{
+        private Operator op;
+        private Expression left;
+        private Expression right;
 
-       
-        if(inputArr.length == 0) throw new IllegalArgumentException("Empty input, enter expression");
-
-        //If input the input starts or ends with a binary operator it's invalid
-        if(BINARY_OPERATORS.contains(inputArr[0]+"") || BINARY_OPERATORS.contains(inputArr[inputArr.length-1]+""))
-            throw new IllegalArgumentException("Expression can't begin/end with binary operator");
-
-        Stack<Character> parenthesisStack = new Stack<>();
-        Stack<Character> doubleOperatorStack = new Stack<>();
-        Stack<Character> notOperatorCheck = new Stack<>();
-        
-        for(char c : inputArr){
-            switch (c) {
-                case '(':
-                    parenthesisStack.push(c);
-                    break;
-                case ')':
-                    if(parenthesisStack.isEmpty()) throw new IllegalArgumentException("Uneven parenthesis");
-                    parenthesisStack.pop();
-                    break;
-                case '!':
-                    //LÄGG TILL
-                    notOperatorCheck.push(c);
-                    break;
-                default:
-                    if(BINARY_OPERATORS.contains("" + c))
-                        if(doubleOperatorStack.isEmpty()) doubleOperatorStack.push(c);
-                        else throw new IllegalArgumentException("Double binary operator error"); 
-                    else{
-                        if(!doubleOperatorStack.isEmpty()) doubleOperatorStack.pop();
-                    }
-                    notOperatorCheck.push(c);
-                    break;
-            }
+        BinaryOp(Operator op, Expression left, Expression right){
+            this.op = op;
+            this.left = left;
+            this.right = right;
         }
 
-            if(!parenthesisStack.isEmpty()) throw new IllegalArgumentException("Uneven parenthesis");
+        @Override
+        protected String subExprToString(Operator previousOp){
+            String result = this.left.subExprToString(this.op) + " " + this.op.symbol + " " + this.right.subExprToString(this.op);
             
-            if(!notOperatorCheck.isEmpty() && notOperatorCheck.pop() == '!')
-                throw new IllegalArgumentException(" '!' operator error");
+            if(previousOp.precedence > this.op.precedence) return "(" + result + ")";
 
-            //Checking if not operator has correct placement
-            char last = 'a';
-            while(!notOperatorCheck.isEmpty()){
-                char current = notOperatorCheck.pop();
-                if(current == '!' && BINARY_OPERATORS.contains(last + ""))
-                    throw new IllegalArgumentException(" '!' operator can't be infront of binary operator");
-                
-                last = current;
-            }
-        
-        
-        
-    }
-
-
-    //Tokanzies an input string into variables and operators
-    public static List<String> tokanize (String input){
-
-        char[]inputArr = input.trim().replaceAll(" ", "").toCharArray();
-
-        //Error checking, throws exception if input is invalid
-        validInput(inputArr);
-
-        List <String> tokens = new ArrayList<>();
-        
-        String varBuilder = "";
-        //Used for simplifying double !! operators
-        char lastCharacter = '0';
-        for(char c : inputArr){
-            if((BINARY_OPERATORS).contains(""+c) || c == '('|| c == ')')
-            {   
-                if(!varBuilder.isBlank())tokens.add(varBuilder);
-                tokens.add("" + c);
-                varBuilder = ""; //Reset var builder
-                lastCharacter = c;
-            }
-            else if(c == '!')
-            {
-                if(!varBuilder.isBlank())tokens.add(varBuilder);
-                varBuilder = ""; //Reset var builder
-
-                //If there is a !! in the input then remove them both becuase they cancel out
-                if(lastCharacter == c){
-                    tokens.removeLast();
-                    lastCharacter = '0';
-                }
-                else{ 
-                    tokens.add("" + c);
-                    lastCharacter = c;
-                }
-            }
-            else
-            {
-                varBuilder += c; //Add char to variable name
-                lastCharacter = c;
-            }
-
+            return result;
             
         }
-        //Add the last variable
-        if(!varBuilder.isBlank())tokens.add(varBuilder);
 
-        return tokens;
+        @Override
+        protected void retriveSubExpression(List<Expression> breakdown){
+            breakdown.add(this);
+            right.retriveSubExpression(breakdown);
+            left.retriveSubExpression(breakdown);
+        }
+
+        @Override
+        public int evaluateExpression(){
+            int l = this.left.evaluateExpression();
+            int r = this.right.evaluateExpression();
+            return this.op.eval(l, r);
+        }
+
+        @Override
+        public int expressionSize(){
+            return 1 + this.left.expressionSize() + this.right.expressionSize();
+        }
+
     }
 
-    //Calculates the number of variables in an expression
-    public static int numOfVariables(Expression expr){
-        if(expr.aTerm != null){
-            return numOfVariables(expr.aTerm.lTerm) + numOfVariables(expr.aTerm.rTerm);
+    /**
+    * Represents a unary operation applied to a single expression.
+    */
+    static class UnaryOp extends Expression{
+        Operator op;
+        Expression expr;
+
+        UnaryOp(Operator op, Expression expr){
+            this.op = op;
+            this.expr = expr;
         }
-        else if(expr.oTerm != null){
-            return numOfVariables(expr.oTerm.lTerm) + numOfVariables(expr.oTerm.rTerm);
+
+        @Override
+        protected String subExprToString(Operator previousOp){
+            String result = this.op.symbol + this.expr.subExprToString(this.op);
+            
+            //Check if the higher level expression had lower precendence
+            if(previousOp.precedence > this.op.precedence)
+                 return "(" + result + ")";
+            
+            return  result;
         }
-        else if(expr.xorTerm != null){
-            return numOfVariables(expr.xorTerm.lTerm) + numOfVariables(expr.xorTerm.rTerm);
+
+        @Override
+        protected void retriveSubExpression(List<Expression> breakdown){
+            breakdown.addFirst(this);
+            expr.retriveSubExpression(breakdown);
         }
-        else if(expr.nTerm != null){
-            return numOfVariables(expr.nTerm.expr);
+
+
+        @Override
+        public int evaluateExpression(){
+            return this.op.eval(this.expr.evaluateExpression(), 0); // Ignores the 0 value in NOT enum
         }
-        else{
+
+        @Override
+        public int expressionSize(){
+            return 1 + this.expr.expressionSize();
+        }
+    }
+
+    /**
+    * Represents a variable, will always be a leaf node in expression AST
+    */
+    static class Variable extends Expression{
+        
+        String name;
+        int currentValue;
+
+        Variable(String name){
+            this.name = name;
+            this.currentValue = 0;
+        }
+
+        public void setCurrentValue(int currentValue) {
+            this.currentValue = currentValue;
+        }
+
+        @Override
+        protected String subExprToString(Operator previousOp){
+            //Always leaf node
+            return this.name;
+        }
+
+        @Override
+        protected void retriveSubExpression(List<Expression> breakdown){
+            if(breakdown.contains(this)) return;
+            else breakdown.add(this);
+        }
+
+        @Override
+        public int evaluateExpression(){
+            return this.currentValue;
+        }
+
+        @Override
+        public int expressionSize(){
             return 1;
         }
     }
 
-    //Calculates the number of variables in a queue split up into finalExpression
-    public static int numOfVariables(List<Expression> subExprs){
-        int counter = 0;
-        for(Expression expr : subExprs){
-            if(expr.aTerm == null && expr.oTerm == null && expr.nTerm == null && expr.xorTerm == null) counter++;
+
+    // ------- PARSER -------------
+
+    //Returns string with completed regex to tokenize operators, paranthesis and variables
+    private static String getRegex(){
+
+        StringBuilder operatorSymbols = new StringBuilder();
+        for(Operator op : Operator.allOperators()){
+            operatorSymbols.append(op.symbol);
         }
-        return counter;
+        String operators = operatorSymbols.toString();
+        return "(?=[" + operators + "()])|(?<=[" + operators + "()])";
     }
 
-    @Override
-    public String toString(){
-        return exprToString(this, HIGHEST_PRECEDENCE);
+    /**
+     * Parses input String into an expression, tokenizes string and then uses the Shunting yard algorithm to build AST
+     * @param input - Written expression
+     * @return Assembeled expression in the form of a AST
+     */
+    public static Expression parseToExpression(String input){
+        
+        if(input == null || input.trim().isEmpty()) throw new IllegalArgumentException("Input expression cannot be empty");
+
+
+        //Tokenizes the input string, keeps variables with full names and operators separete
+        String[] tokens = input.replaceAll("\\s+", "").split(getRegex());
+
+        //Shunting yard algorithm
+        List<Expression> output = new ArrayList<>();
+        Stack<String> operators = new Stack<>();
+
+        //Used to not add duplicate variables
+        HashMap<String, Variable> addedVariables = new HashMap<>();
+        
+        //Building expression tree with shunnting yard algorithm
+        for(String token : tokens){
+            
+            Operator currentOp = Operator.fromSymbol(token);
+
+            //If token is an operator
+            if(currentOp != null){
+                while(!operators.isEmpty()){
+                    
+                    String topOfStack = operators.peek();
+
+                    if(topOfStack.contains("(")) break;
+
+                    Operator topOfStackOp = Operator.fromSymbol(topOfStack); //Convert to operator enum
+
+                    if(
+                        (topOfStackOp.precedence > currentOp.precedence)
+                        || topOfStackOp.precedence == currentOp.precedence && currentOp.leftAssoc
+                    ) 
+                    {
+                        addOpExprToOutput(Operator.fromSymbol(operators.pop()), output);
+                    }
+                    else break;
+                }
+                
+                operators.push(token);
+            }
+            //If token is openning paranthesis
+            else if(token.contains("(")) operators.push(token);
+            //If token is closing paranthesis
+            else if(token.contains(")")){
+
+                if(operators.isEmpty() || !operators.contains("(")) 
+                    throw new IllegalArgumentException("Can't begin with closening parenthesis");
+
+                while(!operators.peek().contains("(")){
+                    addOpExprToOutput(Operator.fromSymbol(operators.pop()), output);
+                    if(operators.isEmpty()) throw new IllegalArgumentException("Uneven parenthesis");
+                }
+                operators.pop(); //Removes "("
+            }
+            //Else token is a variable
+            else{
+                if(addedVariables.containsKey(token)) output.add(addedVariables.get(token));
+                else{  
+                    Variable var = new Variable(token);
+                    output.add(var);
+                    addedVariables.put(token, var);
+                }
+            }
+        }
+
+        while(!operators.isEmpty()){
+            if(operators.peek().contains("(") || operators.contains(")"))
+                throw new IllegalArgumentException("Uneven parenthesis");
+            addOpExprToOutput(Operator.fromSymbol(operators.pop()), output);
+        }
+
+        if(output.isEmpty()) throw new IllegalArgumentException("Input expression cannot be empty");
+        return output.removeLast();
+
+
+        //Behöver se till att variabler med samma namn inte läggs till två gånger
+        // Kanske kan använda en hashMap?
     }
 
-    //Help method for parsing an expression to a string
-    private static String exprToString(Expression expr, int precedenceCheck){
-
-        String result = "";
-        boolean addParenthesis = false;
-
-        if(expr == null) return result;
-
-        if(expr.precedence > precedenceCheck){
-            precedenceCheck += EXTRA_PRECEDENCE;
-            addParenthesis = true;
+    //Will only enter this if operatorToken is valid operator, helper to parseToExpression method
+    private static void addOpExprToOutput(Operator op, List<Expression> output){
+        
+        Expression expr = null;
+        
+        if(op.arity == 1){
+            if(output.size() < op.arity) throw new IllegalArgumentException("Invalid Input, not enough operands");
+            expr = new UnaryOp(op, output.removeLast());
+            output.add(expr);
         }
-    
-        if(expr.aTerm != null){
-            result = exprToString(expr.aTerm.rTerm, precedenceCheck) + " * " + exprToString(expr.aTerm.lTerm, precedenceCheck);
+        else if(op.arity == 2){
+            if(output.size() < op.arity) throw new IllegalArgumentException("Invalid Input, not enough operands");
+            Expression exprR = output.removeLast();
+            Expression exprL = output.removeLast();
+            expr = new BinaryOp(op, exprL, exprR);
+            output.add(expr);
         }
-        else if(expr.oTerm != null){
-            result = exprToString(expr.oTerm.rTerm, precedenceCheck) + " + " + exprToString(expr.oTerm.lTerm, precedenceCheck);
-        }
-        else if(expr.xorTerm != null){
-            result = exprToString(expr.xorTerm.rTerm, precedenceCheck) + " " + XOR + " " + exprToString(expr.xorTerm.lTerm, precedenceCheck);
-        }
-        else if(expr.nTerm != null){
-            result = "!" + exprToString(expr.nTerm.expr, precedenceCheck);
-        }
-        else{
-            result = expr.var.varName;
-        }
-
-        if(addParenthesis){
-            result = "(" + result + ")";
-        }
-
-        return result;
     }
-
-
-
-
-
 }

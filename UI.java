@@ -6,21 +6,39 @@ import javax.swing.plaf.ColorUIResource;
 import javax.swing.table.DefaultTableCellRenderer; 
 import javax.swing.table.TableCellRenderer; 
 
+/**
+ * Graphical User Interface for the Truth Table Generator application.
+ * 
+ * <p>This class creates a window that allows users to input a boolean expression,
+ * generate a truth table, and display it in a JTable. It also handles exceptions
+ * for invalid expressions and displays them to the user.</p>
+ * 
+ * <p>The UI includes:</p>
+ * <ul>
+ *     <li>A text field for inputting expressions</li>
+ *     <li>Buttons for generating truth tables and inserting XOR symbols</li>
+ *     <li>A scrollable JTable to display the resulting truth table</li>
+ *     <li>Red-colored error messages for invalid input</li>
+ * </ul>
+ */
 public class UI { 
-    JFrame frame; 
-    int windowWidth; 
-    int windowHeight; 
-    JScrollPane currentTruthTable; 
-    Stack<JLabel> activeExceptions; 
-    JLabel currentException; 
+    private JFrame frame;  
+    private JScrollPane currentTruthTable; 
+    private Stack<JLabel> activeExceptions; 
+    private JLabel currentException; 
 
-    UI(int windowWidth, int windowHeight)
+    /**
+     * Constructs the UI with the given window dimensions, initializes all components,
+     * and sets up action listeners for buttons.
+     *
+     * @param windowWidth  width of the window in pixels
+     * @param windowHeight height of the window in pixels
+     */
+    UI(int width, int height)
     { 
         //Window setup
-        this.windowWidth = windowWidth; 
-        this.windowHeight = windowHeight; 
         frame = new JFrame("Truth Table Generator"); 
-        frame.setSize(windowWidth, windowHeight); 
+        frame.setSize(width, height); 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
 
         //Main panel
@@ -50,7 +68,7 @@ public class UI {
             try
             { 
                 //Retrieve evaluated table from user input
-                String[][] generatedData = (new TruthTable(userInput)).table;
+                String[][] generatedData = (new TruthTable(userInput)).getTable();
                 
                 //Convert and fix up JTable
                 JTable truthTable = new JTable(generatedData, generatedData[0]); 
@@ -106,5 +124,5 @@ public class UI {
             } 
             table.getColumnModel().getColumn(col).setPreferredWidth(width); 
         } 
-    } 
+    }
 }
