@@ -1,9 +1,9 @@
-# truth-table-generator
+# Truth Table Generator
 A java project where the goal is to generate a correctly evaluated truth table based of an input expression given by the user.
 
 I think almost every computer engineer is tired of writing out truth tables to be able to evaluate a boolean expression, but this generator solves this for you!
 
-* Download/clone the repository and run the TruthTableGenerator.java file.
+Download/clone the repository and run the TruthTableGenerator.java file.
 You should see a simple Java Swing window pop up where you can enter your expression. 
 I use JDK-21 but I believe that any version after JDK-11 should work!
 
