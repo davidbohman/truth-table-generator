@@ -78,7 +78,6 @@ public abstract class Expression {
 
         for(Expression expr : subExpressions){
             if(expr instanceof Variable) variables.add((Variable) expr);
-            //Could add a break here bacues it's always sorted
         }
         return variables;
     }
@@ -308,9 +307,6 @@ public abstract class Expression {
         if(output.isEmpty()) throw new IllegalArgumentException("Input expression cannot be empty");
         return output.removeLast();
 
-
-        //Behöver se till att variabler med samma namn inte läggs till två gånger
-        // Kanske kan använda en hashMap?
     }
 
     //Will only enter this if operatorToken is valid operator, helper to parseToExpression method
